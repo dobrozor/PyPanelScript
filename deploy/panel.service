@@ -1,0 +1,16 @@
+[Unit]
+Description=Python Hosting Panel
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/bots
+Environment="PANEL_BASE_DIR=/root/bots"
+Environment="PANEL_SECRET_KEY=CHANGE_ME_TO_RANDOM_VALUE"
+ExecStart=/root/bots/venv/bin/python /root/bots/run.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

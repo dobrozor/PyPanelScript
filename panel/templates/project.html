@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} — Python Panel{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/xterm/5.3.0/css/xterm.min.css">
+<style>
+  #monaco-editor { height: 60vh; border: 1px solid var(--border); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="project-header">
+  <a href="{{ url_for('main.dashboard') }}" class="back-link">← Все проекты</a>
+  <h1>{{ project.name }}
+    {% if status == 'active' %}<span class="status-dot status-green"></span>
+    {% elif status == 'failed' %}<span class="status-dot status-red"></span>
+    {% else %}<span class="status-dot status-gray"></span>{% endif %}
+  </h1>
+  <div class="project-controls">
+    <form method="post" action="{{ url_for('main.control_project', name=project.name, action='start') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn">▶ Старт</button></form>
+    <form method="post" action="{{ url_for('main.control_project', name=project.name, action='stop') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn">■ Стоп</button></form>
+    <form method="post" action="{{ url_for('main.control_project', name=project.name, action='restart') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn">↻ Рестарт</button></form>
+    <form method="post" action="{{ url_for('main.control_project', name=project.name, action=('disable' if enabled else 'enable')) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn">{{ 'Отключить автозапуск' if enabled else '☑ Автозапуск' }}</button>
+    </form>
+  </div>
+</div>
+
+<div id="live-stats" class="card sys-stats" data-project="{{ project.name }}">
+  <div><span class="stat-label">CPU</span><span id="stat-cpu">—</span></div>
+  <div><span class="stat-label">RAM</span><span id="stat-ram">—</span></div>
+  <div><span class="stat-label">Потоки</span><span id="stat-threads">—</span></div>
+  <div><span class="stat-label">PID</span><span id="stat-pid">{{ pid or '—' }}</span></div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="files">📂 Файлы</button>
+  <button class="tab-btn" data-tab="logs">📜 Логи</button>
+  <button class="tab-btn" data-tab="packages">📦 Библиотеки</button>
+  <button class="tab-btn" data-tab="terminal">💻 Терминал</button>
+  <button class="tab-btn" data-tab="git">🔧 Git</button>
+  <button class="tab-btn" data-tab="backups">💾 Бэкапы</button>
+  <button class="tab-btn" data-tab="schedule">⏱ Планировщик</button>
+  <button class="tab-btn" data-tab="settings">⚙ Настройки</button>
+</div>
+
+<!-- Файлы -->
+<div class="tab-panel active" id="tab-files">
+  <div class="file-manager">
+    <div class="file-tree-panel">
+      <div class="file-tree-actions">
+        <button onclick="fmCreate('file')" title="Новый файл">📄+</button>
+        <button onclick="fmCreate('dir')" title="Новая папка">📁+</button>
+        <label class="btn-file-upload">⬆ Загрузить
+          <input type="file" id="upload-input" multiple hidden>
+        </label>
+      </div>
+      <div id="file-tree" data-project="{{ project.name }}"></div>
+    </div>
+    <div class="editor-panel">
+      <div id="editor-toolbar">
+        <span id="current-file-name" class="muted">Выберите файл слева</span>
+        <button id="save-btn" class="btn btn-primary" disabled>💾 Сохранить</button>
+      </div>
+      <div id="monaco-editor"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Логи -->
+<div class="tab-panel" id="tab-logs">
+  <div class="logs-toolbar">
+    <input type="text" id="log-filter" placeholder="Фильтр по тексту...">
+    <label><input type="checkbox" id="log-autoscroll" checked> Автопрокрутка</label>
+  </div>
+  <pre id="log-output" class="log-output"></pre>
+</div>
+
+<!-- Библиотеки -->
+<div class="tab-panel" id="tab-packages">
+  <div class="card">
+    <h3>requirements.txt</h3>
+    <button id="install-req-btn" class="btn btn-primary">Установить зависимости</button>
+    <pre id="pip-output" class="log-output"></pre>
+  </div>
+  <div class="card">
+    <h3>Установить пакет вручную</h3>
+    <div class="inline-form">
+      <input type="text" id="package-input" placeholder="например, requests==2.31.0">
+      <button id="install-package-btn" class="btn">Установить</button>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Установленные пакеты (общий venv для всех проектов)</h3>
+    <button id="refresh-freeze-btn" class="btn">Обновить список</button>
+    <pre id="freeze-output" class="log-output"></pre>
+  </div>
+</div>
+
+<!-- Терминал -->
+<div class="tab-panel" id="tab-terminal">
+  <div id="xterm-container" data-project="{{ project.name }}"></div>
+</div>
+
+<!-- Git -->
+<div class="tab-panel" id="tab-git">
+  <div class="card">
+    {% if not is_git %}
+      <button id="git-init-btn" class="btn btn-primary">Git Init</button>
+    {% else %}
+      <p class="badge badge-green">Репозиторий инициализирован</p>
+    {% endif %}
+    <div class="inline-form">
+      <input type="text" id="git-remote-input" placeholder="URL удалённого репозитория (GitHub)">
+      <button id="git-remote-btn" class="btn">Добавить remote</button>
+    </div>
+    <div class="inline-form">
+      <input type="text" id="git-commit-input" placeholder="Сообщение коммита" value="update">
+      <button id="git-commit-btn" class="btn">Commit</button>
+    </div>
+    <div class="inline-form">
+      <button id="git-push-btn" class="btn">⬆ Push</button>
+      <button id="git-pull-btn" class="btn">⬇ Pull</button>
+    </div>
+    <pre id="git-output" class="log-output"></pre>
+  </div>
+</div>
+
+<!-- Бэкапы -->
+<div class="tab-panel" id="tab-backups">
+  <button id="create-backup-btn" class="btn btn-primary">📦 Создать Backup</button>
+  <table class="data-table" id="backups-table">
+    <thead><tr><th>Файл</th><th>Размер</th><th>Дата</th><th></th></tr></thead>
+    <tbody>
+      {% for b in backups %}
+      <tr>
+        <td>{{ b.name }}</td>
+        <td>{{ (b.size / 1024 / 1024) | round(2) }} МБ</td>
+        <td>{{ b.modified | int }}</td>
+        <td>
+          <a class="btn btn-sm" href="{{ url_for('main.api_download_backup', name=project.name, backup_name=b.name) }}">⬇</a>
+          <button class="btn btn-sm" onclick="restoreBackup('{{ b.name }}')">Восстановить</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteBackup('{{ b.name }}')">🗑</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Планировщик -->
+<div class="tab-panel" id="tab-schedule">
+  <div class="card">
+    <h3>Запуск по расписанию (systemd timer, помимо постоянно работающего сервиса)</h3>
+    <select id="schedule-preset">
+      <option value="">Отключено</option>
+      <option value="*:0/5">Каждые 5 минут</option>
+      <option value="hourly">Каждый час</option>
+      <option value="daily">Каждый день</option>
+    </select>
+    <button id="save-schedule-btn" class="btn btn-primary">Сохранить</button>
+  </div>
+</div>
+
+<!-- Настройки -->
+<div class="tab-panel" id="tab-settings">
+  <form method="post" action="{{ url_for('main.project_settings', name=project.name) }}" class="card">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Файл запуска</label>
+    <input type="text" name="entry_file" value="{{ project.entry_file }}">
+    <label>Аргументы запуска</label>
+    <input type="text" name="args" value="{{ project.args }}">
+    <label>Переменные окружения (JSON)</label>
+    <textarea name="env" rows="4">{{ project.env_json }}</textarea>
+    <button type="submit" class="btn btn-primary">Сохранить и перезапустить unit</button>
+  </form>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/5.3.0/xterm.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/5.3.0/addons/fit/xterm-addon-fit.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
+<script>window.PROJECT_NAME = {{ project.name | tojson }};</script>
+<script src="{{ url_for('static', filename='js/project.js') }}"></script>
+{% endblock %}

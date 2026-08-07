@@ -1,0 +1,9 @@
+Flask==3.0.3
+Flask-Login==0.6.3
+Flask-SocketIO==5.3.6
+Flask-WTF==1.2.1
+python-socketio==5.11.2
+eventlet==0.36.1
+werkzeug==3.0.3
+psutil==5.9.8
+pyotp==2.9.0
