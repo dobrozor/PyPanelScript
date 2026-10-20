@@ -54,16 +54,6 @@ curl -fsSL https://raw.githubusercontent.com/dobrozor/PyPanelScript/main/install
 curl -fsSL https://raw.githubusercontent.com/dobrozor/PyPanelScript/main/install.sh | sudo bash -s uninstall --purge
 ```
 
-### Ручная установка
-
-```bash
-git clone https://github.com/dobrozor/PyPanelScript/pypanel.git /opt/pypanel && cd /opt/pypanel
-python3 -m venv venv && venv/bin/pip install -r requirements.txt
-PANEL_PASSWORD='мой_пароль' venv/bin/gunicorn -w 1 --threads 8 --timeout 900 -b 0.0.0.0:8001 app:app
-```
-
-Или запустите `sudo ./install.sh` из клонированного репозитория, и он возьмёт файлы локально.
-
 ## Как пользоваться
 
 1. Откройте `http://IP_ВПС:8001` и войдите по паролю.
