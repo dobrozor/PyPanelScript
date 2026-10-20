@@ -28,7 +28,7 @@ curl -fsSL https://raw.githubusercontent.com/YOUR_USER/pypanel/main/install.sh |
 Свои параметры задаются переменными:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/YOUR_USER/pypanel/main/install.sh \
+curl -fsSL https://raw.githubusercontent.com/dobrozor/PyPanelScript/main/install.sh \
   | sudo PANEL_PASSWORD='мой_пароль' PANEL_PORT=8001 PANEL_HOST=0.0.0.0 bash
 ```
 
@@ -45,19 +45,19 @@ curl -fsSL https://raw.githubusercontent.com/YOUR_USER/pypanel/main/install.sh \
 
 ```bash
 # обновить (проекты и данные не затрагиваются)
-curl -fsSL https://raw.githubusercontent.com/YOUR_USER/pypanel/main/install.sh | sudo bash -s update
+curl -fsSL https://raw.githubusercontent.com/dobrozor/PyPanelScript/main/install.sh | sudo bash -s update
 
 # удалить сервис (проекты останутся в /opt/pypanel/data)
-curl -fsSL https://raw.githubusercontent.com/YOUR_USER/pypanel/main/install.sh | sudo bash -s uninstall
+curl -fsSL https://raw.githubusercontent.com/dobrozor/PyPanelScript/main/install.sh | sudo bash -s uninstall
 
 # удалить всё, включая проекты
-curl -fsSL https://raw.githubusercontent.com/YOUR_USER/pypanel/main/install.sh | sudo bash -s uninstall --purge
+curl -fsSL https://raw.githubusercontent.com/dobrozor/PyPanelScript/main/install.sh | sudo bash -s uninstall --purge
 ```
 
 ### Ручная установка
 
 ```bash
-git clone https://github.com/YOUR_USER/pypanel.git /opt/pypanel && cd /opt/pypanel
+git clone https://github.com/dobrozor/PyPanelScript/pypanel.git /opt/pypanel && cd /opt/pypanel
 python3 -m venv venv && venv/bin/pip install -r requirements.txt
 PANEL_PASSWORD='мой_пароль' venv/bin/gunicorn -w 1 --threads 8 --timeout 900 -b 0.0.0.0:8001 app:app
 ```
