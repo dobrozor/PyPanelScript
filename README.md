@@ -20,7 +20,7 @@
 На чистом VPS (Debian/Ubuntu, также RHEL-подобные системы с systemd), от root:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/YOUR_USER/pypanel/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/dobrozor/PyPanelScript/main/install.sh | sudo bash
 ```
 
 Скрипт поставит `python3`/`venv` (если их нет), создаст venv в `/opt/pypanel`, сгенерирует пароль, зарегистрирует systemd-сервис, откроет порт в `ufw` (если он включён) и выведет адрес панели и пароль.
